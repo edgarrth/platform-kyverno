@@ -1,0 +1,17 @@
+nodeSelector:
+  node: system
+  
+admissionController:
+  metricsService:
+    create: true
+  serviceMonitor:
+    enabled: true
+backgroundController:
+  serviceMonitor:
+    enabled: true
+cleanupController:
+  serviceMonitor:
+    enabled: true
+reportsController:
+  serviceMonitor:
+    enabled: true

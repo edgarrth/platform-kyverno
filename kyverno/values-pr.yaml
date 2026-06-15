@@ -1,0 +1,16 @@
+# stack/policy-reporter/values.yaml
+
+nodeSelector:
+  node: system
+
+ui:
+  enabled: true
+  plugins:
+    kyverno: true
+  nodeSelector:
+    node: system
+
+kyvernoPlugin:
+  enabled: true
+  nodeSelector:
+    node: system
