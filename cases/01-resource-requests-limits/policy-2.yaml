@@ -1,0 +1,76 @@
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: require-container-resources
+  namespace: default
+  annotations:
+    policies.kyverno.io/title: Require resource requests and limits
+    policies.kyverno.io/category: Resource Management
+spec:
+  validationFailureAction: Enforce # Enforce # Audit -> 
+  background: false # analiza recursos existentes y generar policy reports
+  rules:
+
+  - name: require-resources-on-containers
+    match:
+      any:
+      - resources:
+          kinds:
+          - Deployment
+          # - Deployment/scale # -> no contiene .spec.template.spec.containers[].resources
+          # - ReplicaSet
+          # api/version/kind
+          - argoproj.io/v1alpha1/Rollout
+          # https://kyverno.io/docs/policy-types/cluster-policy/match-exclude/#match-statements
+          operations:
+          - CREATE
+          - UPDATE
+    validate:
+      message: "Cada contenedor debe declarar requests (cpu/memory) y limits de memory."
+      allowExistingViolations: false
+      foreach:
+      - list: "request.object.spec.template.spec.containers[]"
+        deny:
+          conditions:
+            any:
+            - key: "{{ element.resources.requests.cpu || '' }}"
+              operator: Equals
+              value: ""
+            - key: "{{ element.resources.requests.memory || '' }}"
+              operator: Equals
+              value: ""
+            # - key: "{{ element.resources.limits.cpu || '' }}"
+            #   operator: Equals
+            #   value: ""
+            - key: "{{ element.resources.limits.memory || '' }}"
+              operator: Equals
+              value: ""
+
+  - name: block-scale-if-deployment-has-containers-without-resources
+    match:
+      any:
+      - resources:
+          kinds:
+          - Deployment/scale
+          operations:
+          - UPDATE
+    context:
+    - name: parentdeploy
+      apiCall:
+        urlPath: "/apis/apps/v1/namespaces/{{request.namespace}}/deployments/{{request.name}}"
+    validate:
+      message: "No puedes escalar este Deployment porque su template tiene contenedores sin requests cpu/memory o limit memory."
+      foreach:
+      - list: "parentdeploy.spec.template.spec.containers[]"
+        deny:
+          conditions:
+            any:
+            - key: "{{ element.resources.requests.cpu || '' }}"
+              operator: Equals
+              value: ""
+            - key: "{{ element.resources.requests.memory || '' }}"
+              operator: Equals
+              value: ""
+            - key: "{{ element.resources.limits.memory || '' }}"
+              operator: Equals
+              value: ""

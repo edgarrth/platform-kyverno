@@ -1,0 +1,27 @@
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: require-run-as-non-root
+  namespace: default
+  annotations:
+    policies.kyverno.io/title: Require runAsNonRoot
+spec:
+  validationFailureAction: Enforce # Audit # Enforce
+  background: true
+  rules:
+
+  - name: require-pod-run-as-non-root
+    match:
+      any:
+      - resources:
+          kinds:
+          - Deployment
+          - argoproj.io/v1alpha1/Rollout
+    validate:
+      message: "El Pod debe ejecutar como usuario no root."
+      pattern:
+        spec:
+          template:
+            spec:
+              securityContext:
+                runAsNonRoot: true

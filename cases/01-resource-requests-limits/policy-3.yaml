@@ -1,0 +1,111 @@
+apiVersion: policies.kyverno.io/v1
+kind: NamespacedValidatingPolicy
+metadata:
+  name: require-container-resources
+  annotations:
+    policies.kyverno.io/title: Require resource requests and limits
+    policies.kyverno.io/category: Resource Management
+spec:
+  validationActions:
+    - Deny
+
+  evaluation:
+    admission:
+      enabled: true
+    background:
+      enabled: true
+
+  matchConstraints:
+    resourceRules:
+      - apiGroups:
+          - apps
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - deployments
+
+      - apiGroups:
+          - argoproj.io
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - rollouts
+
+  # matchConditions:
+  #   - name: only-default-namespace
+  #     expression: "object.metadata.namespace == 'default'"
+
+  variables:
+    - name: containers
+      expression: "object.spec.template.spec.containers"
+
+  validations:
+    - expression: >-
+        variables.containers.all(
+          c, has(c.resources) && has(c.resources.requests) &&
+            'cpu' in c.resources.requests &&
+            'memory' in c.resources.requests &&
+          has(c.resources.limits) &&
+            'memory' in c.resources.limits
+        )
+      message: "Cada contenedor debe declarar requests cpu/memory y limit memory."
+---
+apiVersion: policies.kyverno.io/v1
+kind: NamespacedValidatingPolicy
+metadata:
+  name: block-scale-if-missing-container-resources
+  namespace: default
+  annotations:
+    policies.kyverno.io/title: Block scale if Deployment has containers without resources
+    policies.kyverno.io/category: Resource Management
+spec:
+  validationActions:
+    - Deny
+
+  evaluation:
+    admission:
+      enabled: true
+    background:
+      enabled: false
+
+  matchConstraints:
+    resourceRules:
+      - apiGroups:
+          - apps
+        apiVersions:
+          - v1
+        operations:
+          - UPDATE
+        resources:
+          - deployments/scale
+
+  variables:
+    - name: parentdeploy
+      expression: >-
+        resource.Get(
+          "apps/v1",
+          "deployments",
+          object.metadata.name
+        )
+
+    - name: containers
+      expression: >-
+        variables.parentdeploy.spec.template.spec.containers
+
+  validations:
+    - expression: >-
+        variables.containers.all(c,
+          has(c.resources) &&
+          has(c.resources.requests) &&
+          'cpu' in c.resources.requests &&
+          'memory' in c.resources.requests &&
+          has(c.resources.limits) &&
+          'memory' in c.resources.limits
+        )
+      message: "No puedes escalar este Deployment porque su template tiene contenedores sin requests cpu/memory o limit memory."

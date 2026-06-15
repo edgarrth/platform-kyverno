@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: paymentservice
+  labels:
+    app: paymentservice
+spec:
+  selector:
+    matchLabels:
+      app: paymentservice
+  template:
+    metadata:
+      labels:
+        app: paymentservice
+      annotations:
+        instrumentation.opentelemetry.io/inject-nodejs: 'true'
+        instrumentation.opentelemetry.io/inject-into-containers: server
+    spec:
+      serviceAccountName: paymentservice
+      terminationGracePeriodSeconds: 5
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      nodeSelector:
+        node: workloads
+      containers:
+      - name: server
+        securityContext:
+          allowPrivilegeEscalation: true
+          capabilities:
+            add:
+            - NET_ADMIN
+          privileged: true
+          readOnlyRootFilesystem: false
+        image: us-central1-docker.pkg.dev/google-samples/microservices-demo/paymentservice:v0.10.5
+        ports:
+        - containerPort: 50051
+        env:
+        - name: PORT
+          value: '50051'
+        - name: DISABLE_PROFILER
+          value: '1'
+        readinessProbe:
+          grpc:
+            port: 50051
+        livenessProbe:
+          grpc:
+            port: 50051
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 1
+            memory: 512Mi

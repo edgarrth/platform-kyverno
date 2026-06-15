@@ -1,0 +1,12 @@
+Caso de uso: Bloquear privileged, escalación de privilegios y capabilities peligrosas
+Familia: Pod Security / hardening
+
+Descripción:
+Ejemplo típico de controles Pod Security: privileged=false, allowPrivilegeEscalation=false, readOnlyRootFilesystem=true y drop ALL.
+
+Namespace: default
+
+Orden sugerido:
+  k apply -f policy.yaml
+  k apply -f manifest-error.yaml    # debe ser rechazado por Kyverno
+  k apply -f manifest-fixed.yaml    # debe ser aceptado

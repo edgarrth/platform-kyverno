@@ -1,0 +1,12 @@
+Caso de uso: Exigir requests y limits en Deployments
+Familia: Recursos y costos
+
+Descripción:
+Control recurrente para evitar scheduling impredecible, consumo sin límite y ruido en capacity planning/HPA.
+
+Namespace: default
+
+Orden sugerido:
+  k apply -f policy.yaml
+  k apply -f manifest-error.yaml    # debe ser rechazado por Kyverno
+  k apply -f manifest-fixed.yaml    # debe ser aceptado

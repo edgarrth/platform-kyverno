@@ -1,0 +1,12 @@
+Caso de uso: Forzar ejecución como usuario no root
+Familia: Identidad y mínimo privilegio
+
+Descripción:
+Control recurrente para reducir impacto ante compromiso del contenedor y alinearse a estándares Restricted.
+
+Namespace: default
+
+Orden sugerido:
+  k apply -f policy.yaml
+  k apply -f manifest-error.yaml    # debe ser rechazado por Kyverno
+  k apply -f manifest-fixed.yaml    # debe ser aceptado
